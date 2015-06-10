@@ -1,33 +1,43 @@
-VerticalMotionView = require './vertical-motion-view'
 {CompositeDisposable} = require 'atom'
 
-module.exports = VerticalMotion =
-  verticalMotionView: null
-  modalPanel: null
-  subscriptions: null
+VerticalMotion =
+  lineBounds: (editor, row) ->
+    line = editor.lineTextForBufferRow(row)
+    s = line.search(/\S/)
+    s = line.length if s == -1
+    e = line.search(/\S\s*$/) + 1
+    e = line.length if e == 0
+    [s, e]
+
+  next: (event) ->
+    editor = event.target.getModel()
+    maxRow = editor.getLineCount() - 1
+    editor.moveCursors (cursor) =>
+      {row, column} = cursor.getBufferPosition()
+      while row < maxRow
+        row += 1
+        [s, e] = @lineBounds(editor, row)
+        break if s <= column <= e and s < e
+      cursor.setBufferPosition([row, column])
+
+  previous: (event) ->
+    editor = event.target.getModel()
+    editor.moveCursors (cursor) =>
+      {row, column} = cursor.getBufferPosition()
+      while row > 0
+        row -= 1
+        [s, e] = @lineBounds(editor, row)
+        break if s <= column <= e and s < e
+      cursor.setBufferPosition([row, column])
+
+module.exports =
+  VerticalMotion: VerticalMotion
 
   activate: (state) ->
-    @verticalMotionView = new VerticalMotionView(state.verticalMotionViewState)
-    @modalPanel = atom.workspace.addModalPanel(item: @verticalMotionView.getElement(), visible: false)
-
-    # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
     @subscriptions = new CompositeDisposable
-
-    # Register command that toggles this view
-    @subscriptions.add atom.commands.add 'atom-workspace', 'vertical-motion:toggle': => @toggle()
+    @subscriptions.add atom.commands.add 'atom-workspace',
+      'vertical-motion:next': (event) -> VerticalMotion.next(event)
+      'vertical-motion:previous': (event) -> VerticalMotion.previous(event)
 
   deactivate: ->
-    @modalPanel.destroy()
     @subscriptions.dispose()
-    @verticalMotionView.destroy()
-
-  serialize: ->
-    verticalMotionViewState: @verticalMotionView.serialize()
-
-  toggle: ->
-    console.log 'VerticalMotion was toggled!'
-
-    if @modalPanel.isVisible()
-      @modalPanel.hide()
-    else
-      @modalPanel.show()

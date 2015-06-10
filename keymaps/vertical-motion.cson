@@ -7,5 +7,6 @@
 
 # For more detailed documentation see
 # https://atom.io/docs/latest/behind-atom-keymaps-in-depth
-'atom-workspace':
-  'ctrl-alt-o': 'vertical-motion:toggle'
+'atom-text-editor':
+  'alt-n': 'vertical-motion:next'
+  'alt-p': 'vertical-motion:previous'

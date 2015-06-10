@@ -1,62 +1,83 @@
-VerticalMotion = require '../lib/vertical-motion'
-
-# Use the command `window:run-package-specs` (cmd-alt-ctrl-p) to run specs.
-#
-# To run a specific `it` or `describe` block add an `f` to the front (e.g. `fit`
-# or `fdescribe`). Remove the `f` to unfocus the block.
+{VerticalMotion} = require '../lib/vertical-motion'
+EditorState = require './editor-state'
 
 describe "VerticalMotion", ->
-  [workspaceElement, activationPromise] = []
-
   beforeEach ->
-    workspaceElement = atom.views.getView(atom.workspace)
-    activationPromise = atom.packages.activatePackage('vertical-motion')
+    waitsForPromise =>
+      atom.project.open().then (editor) =>
+        @editor = editor
+        @event = target: {getModel: => @editor}
 
-  describe "when the vertical-motion:toggle event is triggered", ->
-    it "hides and shows the modal panel", ->
-      # Before the activation event the view is not on the DOM, and no panel
-      # has been created
-      expect(workspaceElement.querySelector('.vertical-motion')).not.toExist()
+  describe "vertical-motion:next", ->
+    it "skips lines that don't reach the current column", ->
+      EditorState.set(@editor, "aa[0]\na\naa\naa\n")
+      console.log(VerticalMotion)
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\na\naa[0]\naa\n")
 
-      # This is an activation event, triggering it will cause the package to be
-      # activated.
-      atom.commands.dispatch workspaceElement, 'vertical-motion:toggle'
+    it "skips lines that start after the current column", ->
+      EditorState.set(@editor, "aa[0]\n   a\naa\naa\n")
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\n   a\naa[0]\naa\n")
 
-      waitsForPromise ->
-        activationPromise
+    it "lands on lines that are as long as the current column", ->
+      EditorState.set(@editor, "aa[0]\naa\naa\n")
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\naa\n")
 
-      runs ->
-        expect(workspaceElement.querySelector('.vertical-motion')).toExist()
+    it "lands on lines that start on the current column", ->
+      EditorState.set(@editor, "aa[0]\n  aa\naa\n")
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\n  [0]aa\naa\n")
 
-        verticalMotionElement = workspaceElement.querySelector('.vertical-motion')
-        expect(verticalMotionElement).toExist()
+    it "skips blank lines", ->
+      EditorState.set(@editor, "aa[0]\n\naa\naa\n")
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\n\naa[0]\naa\n")
 
-        verticalMotionPanel = atom.workspace.panelForItem(verticalMotionElement)
-        expect(verticalMotionPanel.isVisible()).toBe true
-        atom.commands.dispatch workspaceElement, 'vertical-motion:toggle'
-        expect(verticalMotionPanel.isVisible()).toBe false
+    it "skips lines that are only spaces", ->
+      EditorState.set(@editor, "aa[0]\n   \naa\naa\n")
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\n   \naa[0]\naa\n")
 
-    it "hides and shows the view", ->
-      # This test shows you an integration test testing at the view level.
+    it "stops at the end of the buffer", ->
+      EditorState.set(@editor, "aa[0]\n")
+      VerticalMotion.next(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\n[0]")
 
-      # Attaching the workspaceElement to the DOM is required to allow the
-      # `toBeVisible()` matchers to work. Anything testing visibility or focus
-      # requires that the workspaceElement is on the DOM. Tests that attach the
-      # workspaceElement to the DOM are generally slower than those off DOM.
-      jasmine.attachToDOM(workspaceElement)
+  describe "vertical-motion:previous", ->
+    it "skips lines that don't reach the current column", ->
+      EditorState.set(@editor, "aa\naa\na\naa[0]\n")
+      console.log(VerticalMotion)
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\na\naa\n")
 
-      expect(workspaceElement.querySelector('.vertical-motion')).not.toExist()
+    it "skips lines that start after the current column", ->
+      EditorState.set(@editor, "aa\naa\n   a\naa[0]\n")
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\n   a\naa\n")
 
-      # This is an activation event, triggering it causes the package to be
-      # activated.
-      atom.commands.dispatch workspaceElement, 'vertical-motion:toggle'
+    it "lands on lines that are as long as the current column", ->
+      EditorState.set(@editor, "aa\naa\naa[0]\naa\n")
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\naa\naa\n")
 
-      waitsForPromise ->
-        activationPromise
+    it "lands on lines that start on the current column", ->
+      EditorState.set(@editor, "aa\naa\n  [0]aa\naa\n")
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\n  aa\naa\n")
 
-      runs ->
-        # Now we can test for view visibility
-        verticalMotionElement = workspaceElement.querySelector('.vertical-motion')
-        expect(verticalMotionElement).toBeVisible()
-        atom.commands.dispatch workspaceElement, 'vertical-motion:toggle'
-        expect(verticalMotionElement).not.toBeVisible()
+    it "skips blank lines", ->
+      EditorState.set(@editor, "aa\naa\n\naa[0]\n")
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\n\naa\n")
+
+    it "skips lines that are only spaces", ->
+      EditorState.set(@editor, "aa\naa\n   \naa[0]\n")
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("aa\naa[0]\n   \naa\n")
+
+    it "stops at the beginning of the buffer", ->
+      EditorState.set(@editor, "\naa[0]")
+      VerticalMotion.previous(@event)
+      expect(EditorState.get(@editor)).toEqual("[0]\naa")
