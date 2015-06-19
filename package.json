@@ -1,10 +1,9 @@
 {
   "name": "vertical-motion",
   "main": "./lib/vertical-motion",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Atom commands to move vertically up and down.",
-  "keywords": [
-  ],
+  "keywords": [],
   "activationCommands": {
     "atom-text-editor": [
       "vertical-motion:next",
@@ -16,6 +15,5 @@
   "engines": {
     "atom": ">=0.174.0 <2.0.0"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
