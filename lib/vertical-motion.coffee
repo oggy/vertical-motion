@@ -10,7 +10,7 @@ VerticalMotion =
     [s, e]
 
   next: (event) ->
-    editor = event.target.getModel()
+    editor = event.target.closest('atom-text-editor').getModel()
     maxRow = editor.getLineCount() - 1
     editor.moveCursors (cursor) =>
       {row, column} = cursor.getBufferPosition()
@@ -21,7 +21,7 @@ VerticalMotion =
       cursor.setBufferPosition([row, column])
 
   previous: (event) ->
-    editor = event.target.getModel()
+    editor = event.target.closest('atom-text-editor').getModel()
     editor.moveCursors (cursor) =>
       {row, column} = cursor.getBufferPosition()
       while row > 0
